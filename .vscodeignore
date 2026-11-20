@@ -19,3 +19,6 @@ CLAUDE.md
 # Package manager files
 node_modules/**
 package-lock.json
+
+# Build scripts
+scripts/**

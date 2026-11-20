@@ -85,12 +85,13 @@
     "compile": "tsc -p .",
     "watch": "tsc -watch -p .",
     "vscode:prepublish": "npm run compile",
-    "package": "vsce package"
+    "package": "vsce package",
+    "install-local": "node scripts/install-local.js"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
     "@types/vscode": "1.74.0",
-    "@vscode/vsce": "^3.0.0",
+    "@vscode/vsce": "^4.1.1",
     "typescript": "^5.6.0"
   }
 }

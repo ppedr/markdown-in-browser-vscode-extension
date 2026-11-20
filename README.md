@@ -60,7 +60,7 @@ To package and install (packaging compiles first):
 
 ```sh
 npm run package
-code --install-extension markdown-in-browser-0.1.0.vsix
+npm run install-local   # code --install-extension markdown-in-browser-<version>.vsix
 ```
 
 After installing, run **Developer: Reload Window** to load the new version.
