@@ -1,0 +1,70 @@
+{
+  "name": "md-renderer-to-browser",
+  "displayName": "MD Renderer to Browser",
+  "description": "Open Markdown files rendered in your browser, distraction-free.",
+  "version": "0.1.0",
+  "publisher": "local",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": ["Other"],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "mdBrowser.open",
+        "title": "Open in Browser",
+        "category": "Markdown",
+        "icon": "$(globe)"
+      }
+    ],
+    "menus": {
+      "explorer/context": [
+        {
+          "command": "mdBrowser.open",
+          "when": "resourceExtname =~ /^\\.(md|markdown)$/i",
+          "group": "navigation@99"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "mdBrowser.open",
+          "when": "resourceExtname =~ /^\\.(md|markdown)$/i",
+          "group": "navigation"
+        }
+      ],
+      "editor/title/context": [
+        {
+          "command": "mdBrowser.open",
+          "when": "resourceExtname =~ /^\\.(md|markdown)$/i"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "mdBrowser.open",
+          "when": "resourceExtname =~ /^\\.(md|markdown)$/i",
+          "group": "navigation@99"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "mdBrowser.open",
+          "when": "resourceExtname =~ /^\\.(md|markdown)$/i"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p .",
+    "watch": "tsc -watch -p .",
+    "vscode:prepublish": "npm run compile",
+    "package": "vsce package --allow-missing-repository --skip-license"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "1.74.0",
+    "@vscode/vsce": "^3.0.0",
+    "typescript": "^5.6.0"
+  }
+}
