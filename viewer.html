@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MD Viewer</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --border:#30363d; --text:#c9d1d9;
+    --muted:#8b949e; --accent:#58a6ff; --code-bg:#0a0e14; --link:#58a6ff;
+    --thead:#1c2128;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);
+       font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+  #dropzone{min-height:100vh;display:flex;align-items:center;justify-content:center;
+            flex-direction:column;gap:16px;transition:background .15s;cursor:default;}
+  #dropzone.over{background:#12233a;outline:3px dashed var(--accent);outline-offset:-12px;}
+  #dropzone .big{font-size:2rem;color:var(--muted);font-weight:600;letter-spacing:.02em;}
+  #dropzone .hint{color:var(--muted);font-size:.85rem;}
+  #dropzone .row{display:flex;gap:12px;}
+  #dropzone .btn{background:transparent;border:1px solid var(--border);color:var(--muted);
+                 border-radius:8px;padding:8px 18px;font-size:.9rem;cursor:pointer;}
+  #dropzone .btn:hover{border-color:var(--accent);color:var(--text);}
+  #content{display:none;max-width:820px;margin:0 auto;padding:48px 24px 96px;line-height:1.7;}
+  #content h1{border-bottom:1px solid var(--border);padding-bottom:.35em;}
+  #content h1,#content h2,#content h3{line-height:1.3;margin-top:1.4em;}
+  #content p{margin:.9em 0;}
+  #content a{color:var(--link);cursor:pointer;}
+  #content code{background:var(--code-bg);border:1px solid var(--border);border-radius:6px;
+                padding:.15em .4em;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+                font-size:.88em;}
+  #content pre{background:var(--code-bg);border:1px solid var(--border);border-radius:10px;
+               padding:16px;overflow-x:auto;}
+  #content pre code{background:none;border:none;padding:0;font-size:.9em;line-height:1.6;}
+  #content blockquote{border-left:4px solid var(--border);margin:1em 0;padding:.2em 1.2em;color:var(--muted);}
+  #content ul,#content ol{padding-left:1.8em;}
+  #content li{margin:.3em 0;}
+  #content table{border-collapse:collapse;margin:1em 0;width:100%;display:block;overflow-x:auto;}
+  #content th,#content td{border:1px solid var(--border);padding:8px 14px;}
+  #content th{background:var(--thead);text-align:left;}
+  #content img{max-width:100%;border-radius:8px;}
+  #content hr{border:none;border-top:2px solid var(--border);margin:2em 0;}
+  #content input[type=checkbox]{margin-right:.5em;accent-color:var(--accent);}
+  #filebar{position:fixed;top:0;left:0;right:0;background:var(--panel);border-bottom:1px solid var(--border);
+           padding:8px 16px;font-size:.85rem;color:var(--muted);display:none;
+           font-family:ui-monospace,Menlo,Consolas,monospace;z-index:10;}
+  #filebar button{background:none;border:1px solid var(--border);color:var(--muted);
+                  border-radius:6px;padding:2px 10px;cursor:pointer;font-size:.8rem;margin-left:8px;}
+  #filebar button:hover{color:var(--text);border-color:var(--accent);}
+  #backBtn{display:none;}
+  body.has-file #filebar{display:block;}
+  #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+         background:var(--panel);border:1px solid var(--border);color:var(--text);
+         padding:10px 18px;border-radius:10px;font-size:.85rem;display:none;z-index:20;
+         max-width:80vw;box-shadow:0 8px 30px rgba(0,0,0,.5);}
+</style>
+</head>
+<body>
+<div id="filebar">
+  <button id="backBtn" onclick="goBack()">&#8592; back</button><span id="fname"></span>
+  <button style="float:right" onclick="reset()">open another</button>
+</div>
+
+<div id="dropzone">
+  <div class="big">Drop the MD</div>
+  <div class="hint">links to other .md files open rendered &mdash; drop them together, or open the project folder once</div>
+  <div class="row">
+    <button class="btn" onclick="document.getElementById('fileInput').click()">choose file(s)</button>
+    <button class="btn" id="folderBtn" onclick="openFolder()">open project folder</button>
+  </div>
+  <input type="file" id="fileInput" accept=".md,.markdown,.txt,.text" multiple hidden>
+</div>
+
+<div id="content"></div>
+<div id="toast"></div>
+
+<script>
+//__MD_START__
+function escapeHtml(s){
+  return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
+function inline(s){
+  var codeSpans = [];
+  s = escapeHtml(s);
+  s = s.replace(/`([^`]+)`/g, function(m, c){
+    codeSpans.push("<code>"+c+"</code>");
+    return "\u0000"+(codeSpans.length-1)+"\u0000";
+  });
+  s = s.replace(/!\[([^\]]*)\]\(([^)\s]+)(?:\s+"([^"]*)")?\)/g,
+    function(m, alt, url, title){
+      return '<img src="'+url+'" alt="'+alt+'"'+(title?' title="'+title+'"':'')+'>';
+    });
+  s = s.replace(/\[([^\]]+)\]\(([^)\s]+)(?:\s+"([^"]*)")?\)/g,
+    function(m, text, url, title){
+      return '<a href="'+url+'" target="_blank" rel="noopener"'+(title?' title="'+title+'"':'')+'>'+text+'</a>';
+    });
+  s = s.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+  s = s.replace(/__([^_]+)__/g, "<strong>$1</strong>");
+  s = s.replace(/~~([^~]+)~~/g, "<del>$1</del>");
+  s = s.replace(/\*([^*\n]+)\*/g, "<em>$1</em>");
+  s = s.replace(/(?<![\w])_([^_]+)_(?![\w])/g, "<em>$1</em>");
+  s = s.replace(/(^|[\s(])((?:https?:\/\/)[^\s<>"']+)/g, '$1<a href="$2" target="_blank" rel="noopener">$2</a>');
+  s = s.replace(/\u0000(\d+)\u0000/g, function(m, i){ return codeSpans[+i]; });
+  return s;
+}
+
+function indentOf(line){ var m = line.match(/^ */); return m ? m[0].length : 0; }
+
+function parseBlocks(lines){
+  var out = [], i = 0, n = lines.length;
+  function isBlank(l){ return /^\s*$/.test(l); }
+
+  while(i < n){
+    var line = lines[i];
+
+    if(isBlank(line)){ i++; continue; }
+
+    var fence = line.match(/^```(\S*)\s*$/);
+    if(fence){
+      var lang = fence[1], buf = [];
+      i++;
+      while(i < n && !/^```\s*$/.test(lines[i])){ buf.push(lines[i]); i++; }
+      i++;
+      var code = buf.join("\n").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+      out.push('<pre><code class="lang-'+escapeHtml(lang)+'">'+code+'</code></pre>');
+      continue;
+    }
+
+    var h = line.match(/^(#{1,6})\s+(.*)$/);
+    if(h){
+      var lvl = h[1].length;
+      var text = h[2].replace(/\s+#+\s*$/, "");
+      out.push("<h"+lvl+">"+inline(text)+"</h"+lvl+">");
+      i++; continue;
+    }
+
+    if(/^\s*(-{3,}|\*{3,}|_{3,})\s*$/.test(line)){
+      out.push("<hr>"); i++; continue;
+    }
+
+    if(/^\s*>\s?/.test(line)){
+      var qbuf = [];
+      while(i < n && /^\s*>\s?/.test(lines[i])){
+        qbuf.push(lines[i].replace(/^\s*>\s?/, "")); i++;
+      }
+      out.push("<blockquote>"+parseBlocks(qbuf)+"</blockquote>");
+      continue;
+    }
+
+    if(line.indexOf("|") !== -1 && i+1 < n && /^\s*\|?[\s:|-]+\|?\s*$/.test(lines[i+1]) && lines[i+1].indexOf("-") !== -1){
+      function splitRow(l){
+        l = l.trim().replace(/^\|/, "").replace(/\|$/, "");
+        return l.split("|").map(function(c){ return c.trim(); });
+      }
+      var head = splitRow(line);
+      var sep  = splitRow(lines[i+1]);
+      i += 2;
+      var aligns = sep.map(function(c){
+        var l = c.startsWith(":"), r = c.endsWith(":");
+        return l && r ? "center" : (r ? "right" : (l ? "left" : ""));
+      });
+      var t = "<table><thead><tr>";
+      head.forEach(function(c, idx){
+        var a = aligns[idx] ? ' style="text-align:'+aligns[idx]+'"' : "";
+        t += "<th"+a+">"+inline(c)+"</th>";
+      });
+      t += "</tr></thead><tbody>";
+      while(i < n && lines[i].indexOf("|") !== -1 && !isBlank(lines[i])){
+        var row = splitRow(lines[i]);
+        t += "<tr>";
+        row.forEach(function(c, idx){
+          var a = aligns[idx] ? ' style="text-align:'+aligns[idx]+'"' : "";
+          t += "<td"+a+">"+inline(c)+"</td>";
+        });
+        for(var k = row.length; k < head.length; k++){ t += "<td></td>"; }
+        t += "</tr>";
+        i++;
+      }
+      t += "</tbody></table>";
+      out.push(t);
+      continue;
+    }
+
+    var lm = line.match(/^(\s*)([-*+]|\d+[.)])\s+(.*)$/);
+    if(lm){
+      var html = parseList(lines, i);
+      out.push(html.html);
+      i = html.next;
+      continue;
+    }
+
+    var pbuf = [line]; i++;
+    while(i < n && !isBlank(lines[i])
+          && !/^(#{1,6})\s+/.test(lines[i])
+          && !/^```/.test(lines[i])
+          && !/^\s*>\s?/.test(lines[i])
+          && !/^\s*(-{3,}|\*{3,}|_{3,})\s*$/.test(lines[i])
+          && !/^(\s*)([-*+]|\d+[.)])\s+/.test(lines[i])
+          && !(lines[i].indexOf("|") !== -1 && i+1 < n && /^\s*\|?[\s:|-]+\|?\s*$/.test(lines[i+1]) && lines[i+1].indexOf("-") !== -1)){
+      pbuf.push(lines[i]); i++;
+    }
+    var para = inline(pbuf.join("\n"));
+    out.push("<p>"+para.replace(/ {2,}\n/g, "\n").replace(/\n/g, "<br>")+"</p>");
+  }
+  return out.join("\n");
+}
+
+function parseList(lines, start){
+  var first = lines[start].match(/^(\s*)([-*+]|\d+[.)])\s+(.*)$/);
+  var base = first[1].length;
+  var ordered = /\d/.test(first[2]);
+  var tag = ordered ? "ol" : "ul";
+  var n = lines.length, i = start;
+  var html = "<"+tag+">";
+
+  while(i < n){
+    var m = lines[i].match(/^(\s*)([-*+]|\d+[.)])\s+(.*)$/);
+    if(!m || m[1].length !== base) break;
+    if((/\d/.test(m[2])) !== ordered) break;
+
+    var text = m[3];
+    i++;
+
+    var cont = [];
+    while(i < n && !/^\s*$/.test(lines[i])){
+      var ind = indentOf(lines[i]);
+      var isItem = /^(\s*)([-*+]|\d+[.)])\s+/.test(lines[i]);
+      if(ind > base){
+        cont.push(lines[i].slice(Math.min(ind, base+2))); i++;
+      } else if(ind === base && isItem){
+        break;
+      } else if(ind === base && !isItem){
+        cont.push(lines[i]); i++;
+      } else {
+        break;
+      }
+    }
+    while(i < n && /^\s*$/.test(lines[i])){
+      var after = i+1 < n ? lines[i+1] : null;
+      if(after && /^(\s*)([-*+]|\d+[.)])\s+/.test(after) && indentOf(after) === base){ i++; }
+      else break;
+    }
+
+    var inner = "";
+    if(text !== "" || cont.length > 0){
+      inner = parseBlocks([text].concat(cont).filter(function(x){ return x !== ""; }));
+    }
+
+    if(!ordered){
+      var task = text.match(/^\[( |x|X)\]\s+(.*)$/);
+      if(task){
+        var checked = task[1].toLowerCase() === "x" ? " checked" : "";
+        inner = '<input type="checkbox" disabled'+checked+'> ' + inline(task[2]);
+        if(cont.length){ inner += parseBlocks(cont); }
+      }
+    }
+
+    if(inner.startsWith("<p>") && inner.endsWith("</p>")
+       && (inner.match(/<p>/g) || []).length === 1){
+      inner = inner.slice(3, -4);
+    }
+
+    html += "<li>"+inner+"</li>";
+  }
+  html += "</"+tag+">";
+  return { html: html, next: i };
+}
+
+function mdToHtml(md){
+  md = md.replace(/\t/g, "    ").replace(/\r\n?/g, "\n");
+  return parseBlocks(md.split("\n"));
+}
+//__MD_END__
+
+var dz = document.getElementById("dropzone");
+var content = document.getElementById("content");
+var toast = document.getElementById("toast");
+
+// ---- state -------------------------------------------------------------
+var fileMap = {};          // basename (lowercase) -> File
+var dirHandle = null;      // project folder (Chromium)
+var dirCache = {};         // "sub/dir" -> FileSystemDirectoryHandle
+var currentPath = null;    // e.g. ["docs", "guide.md"] when folder is open
+var historyStack = [];     // [{name, html}]
+
+if(!window.showDirectoryPicker){
+  document.getElementById("folderBtn").style.display = "none";
+}
+
+function toastMsg(msg){
+  toast.textContent = msg;
+  toast.style.display = "block";
+  clearTimeout(toast._t);
+  toast._t = setTimeout(function(){ toast.style.display = "none"; }, 4000);
+}
+
+// ---- file loading --------------------------------------------------------
+["dragover","dragenter"].forEach(function(ev){
+  dz.addEventListener(ev, function(e){ e.preventDefault(); dz.classList.add("over"); });
+});
+["dragleave","drop"].forEach(function(ev){
+  dz.addEventListener(ev, function(e){ e.preventDefault(); dz.classList.remove("over"); });
+});
+dz.addEventListener("drop", function(e){
+  var files = Array.prototype.slice.call(e.dataTransfer.files);
+  if(files.length) loadFiles(files);
+});
+document.getElementById("fileInput").addEventListener("change", function(e){
+  if(e.target.files.length) loadFiles(Array.prototype.slice.call(e.target.files));
+});
+
+function loadFiles(files){
+  files.forEach(function(f){ fileMap[f.name.toLowerCase()] = f; });
+  renderFile(files[0], null);
+}
+
+async function openFolder(){
+  try{
+    dirHandle = await window.showDirectoryPicker({mode:"read"});
+    dirCache = {"": dirHandle};
+    toastMsg("Folder open — drop or click any .md inside it.");
+  }catch(err){ /* user cancelled */ }
+}
+
+function normalizeHref(href){
+  // remove query/fragment para arquivo
+  var clean = href.split("#")[0].split("?")[0];
+  var parts = clean.split("/").filter(function(p){ return p && p !== "."; });
+  var out = [];
+  parts.forEach(function(p){
+    if(p === ".."){ out.pop(); } else { out.push(p); }
+  });
+  return out; // ex.: ["docs", "intro.md"]
+}
+
+async function resolveSegments(segs){
+  // retorna File a partir de um caminho relativo à pasta aberta
+  if(!dirHandle) return null;
+  var dir = dirHandle, pathKey = "";
+  for(var d = 0; d < segs.length - 1; d++){
+    pathKey = pathKey ? pathKey + "/" + segs[d] : segs[d];
+    if(!dirCache[pathKey]){
+      try{ dirCache[pathKey] = await dir.getDirectoryHandle(segs[d]); }
+      catch(err){ return null; }
+    }
+    dir = dirCache[pathKey];
+  }
+  try{
+    var fh = await dir.getFileHandle(segs[segs.length - 1]);
+    return await fh.getFile();
+  }catch(err){ return null; }
+}
+
+// ---- render / navigation -------------------------------------------------
+function renderFile(file, path){
+  if(currentPath || document.body.classList.contains("has-file")){
+    historyStack.push({name: document.getElementById("fname").textContent,
+                       html: content.innerHTML});
+  }
+  var reader = new FileReader();
+  reader.onload = function(){
+    content.innerHTML = mdToHtml(reader.result);
+    document.title = file.name + " — MD Viewer";
+    document.getElementById("fname").textContent = path ? path.join("/") : file.name;
+    dz.style.display = "none";
+    content.style.display = "block";
+    document.body.classList.add("has-file");
+    document.getElementById("backBtn").style.display = historyStack.length ? "inline-block" : "none";
+    window.scrollTo(0,0);
+  };
+  reader.readAsText(file);
+  currentPath = path;
+}
+
+function goBack(){
+  var prev = historyStack.pop();
+  if(!prev){ return; }
+  content.innerHTML = prev.html;
+  document.getElementById("fname").textContent = prev.name;
+  document.getElementById("backBtn").style.display = historyStack.length ? "inline-block" : "none";
+  window.scrollTo(0,0);
+}
+
+function reset(){
+  document.body.classList.remove("has-file");
+  content.style.display = "none";
+  dz.style.display = "flex";
+  document.title = "MD Viewer";
+  document.getElementById("fileInput").value = "";
+  historyStack = [];
+  currentPath = null;
+  fileMap = {};
+}
+
+content.addEventListener("click", async function(e){
+  var a = e.target.closest("a");
+  if(!a) return;
+  var href = a.getAttribute("href");
+  if(!href) return;
+  // âncoras internas: deixa o navegador cuidar
+  if(href.startsWith("#")) return;
+  // externos/absolutos: abre em nova aba (comportamento padrão do target=_blank)
+  if(/^[a-z][a-z0-9+.-]*:/i.test(href)) return;
+
+  e.preventDefault();
+  var segs = normalizeHref(href);
+  var base = (href.startsWith("/") || href.startsWith("./") || href.startsWith("../")) && currentPath
+             ? currentPath.slice(0, -1) : [];
+  var full = base.concat(segs);
+  var baseName = segs[segs.length - 1].toLowerCase();
+
+  // 1) arquivo já arrastado nesta sessão
+  if(fileMap[baseName]){
+    renderFile(fileMap[baseName], null); return;
+  }
+  // 2) pasta do projeto aberta
+  var f = await resolveSegments(full);
+  if(f){
+    renderFile(f, full); return;
+  }
+  // 3) última chance: fetch relativo à página (funciona se servir por http)
+  try{
+    var resp = await fetch(href);
+    if(resp.ok){
+      var blob = await resp.blob();
+      renderFile(new File([blob], baseName), null); return;
+    }
+  }catch(err){}
+  toastMsg("Couldn't find " + href + " — drop it together with this file, or use 'open project folder'.");
+});
+</script>
+</body>
+</html>
