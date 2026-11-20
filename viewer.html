@@ -325,7 +325,7 @@ async function openFolder(){
 }
 
 function normalizeHref(href){
-  // remove query/fragment para arquivo
+  // drop the query/fragment to get the file path
   var clean = href.split("#")[0].split("?")[0];
   var parts = clean.split("/").filter(function(p){ return p && p !== "."; });
   var out = [];
@@ -336,7 +336,7 @@ function normalizeHref(href){
 }
 
 async function resolveSegments(segs){
-  // retorna File a partir de um caminho relativo à pasta aberta
+  // returns a File from a path relative to the open folder
   if(!dirHandle) return null;
   var dir = dirHandle, pathKey = "";
   for(var d = 0; d < segs.length - 1; d++){
@@ -399,9 +399,9 @@ content.addEventListener("click", async function(e){
   if(!a) return;
   var href = a.getAttribute("href");
   if(!href) return;
-  // âncoras internas: deixa o navegador cuidar
+  // in-page anchors: let the browser handle them
   if(href.startsWith("#")) return;
-  // externos/absolutos: abre em nova aba (comportamento padrão do target=_blank)
+  // external/absolute: open in a new tab (default target=_blank behavior)
   if(/^[a-z][a-z0-9+.-]*:/i.test(href)) return;
 
   e.preventDefault();
@@ -411,16 +411,16 @@ content.addEventListener("click", async function(e){
   var full = base.concat(segs);
   var baseName = segs[segs.length - 1].toLowerCase();
 
-  // 1) arquivo já arrastado nesta sessão
+  // 1) file already dropped in this session
   if(fileMap[baseName]){
     renderFile(fileMap[baseName], null); return;
   }
-  // 2) pasta do projeto aberta
+  // 2) project folder is open
   var f = await resolveSegments(full);
   if(f){
     renderFile(f, full); return;
   }
-  // 3) última chance: fetch relativo à página (funciona se servir por http)
+  // 3) last resort: fetch relative to the page (works when served over http)
   try{
     var resp = await fetch(href);
     if(resp.ok){
