@@ -4,6 +4,11 @@
   "description": "Open Markdown files rendered in your browser, distraction-free: links between .md files, relative images and live update on save.",
   "version": "0.1.0",
   "publisher": "ppfjuni",
+  "icon": "icon.png",
+  "galleryBanner": {
+    "color": "#0e5ca6",
+    "theme": "dark"
+  },
   "license": "MIT",
   "engines": {
     "vscode": "^1.74.0"
