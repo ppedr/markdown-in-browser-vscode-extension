@@ -1,4 +1,4 @@
-# MD Renderer to Browser
+# Markdown in Browser
 
 Extensão do VS Code que abre arquivos Markdown renderizados no navegador, numa página limpa, sem a interface do editor em volta.
 
@@ -60,7 +60,7 @@ Para empacotar e instalar (o empacotamento compila antes):
 
 ```sh
 npm run package
-code --install-extension md-renderer-to-browser-0.1.0.vsix
+code --install-extension markdown-in-browser-0.1.0.vsix
 ```
 
 Depois de instalar, rode **Developer: Reload Window** para carregar a versão nova.

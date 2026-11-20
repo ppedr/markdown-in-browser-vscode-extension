@@ -1,6 +1,6 @@
 {
-  "name": "md-renderer-to-browser",
-  "displayName": "MD Renderer to Browser",
+  "name": "markdown-in-browser",
+  "displayName": "Markdown in Browser",
   "description": "Open Markdown files rendered in your browser, distraction-free.",
   "version": "0.1.0",
   "publisher": "local",
