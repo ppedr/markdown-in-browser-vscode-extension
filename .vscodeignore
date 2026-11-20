@@ -1,9 +1,21 @@
-.git/**
-.vscode/**
+# Sources and build config (the package ships the compiled out/ only)
 src/**
-node_modules/**
-out/**/*.map
 tsconfig.json
-.gitignore
-*.vsix
+
+# Tests
 test/**
+.vscode-test/**
+
+# Dev/config files
+.vscode/**
+.github/**
+.claude/**
+CLAUDE.md
+.gitignore
+.vscodeignore
+**/*.map
+*.vsix
+
+# Package manager files
+node_modules/**
+package-lock.json

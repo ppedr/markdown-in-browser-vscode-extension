@@ -1,14 +1,35 @@
 {
   "name": "markdown-in-browser",
   "displayName": "Markdown in Browser",
-  "description": "Open Markdown files rendered in your browser, distraction-free.",
+  "description": "Open Markdown files rendered in your browser, distraction-free: links between .md files, relative images and live update on save.",
   "version": "0.1.0",
-  "publisher": "local",
+  "publisher": "ppfjuni",
   "license": "MIT",
   "engines": {
     "vscode": "^1.74.0"
   },
-  "categories": ["Other"],
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "markdown",
+    "md",
+    "preview",
+    "browser",
+    "reader",
+    "viewer",
+    "render",
+    "distraction-free",
+    "live reload"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ppedr/markdown-in-browser-vscode-extension"
+  },
+  "bugs": {
+    "url": "https://github.com/ppedr/markdown-in-browser-vscode-extension/issues"
+  },
+  "homepage": "https://github.com/ppedr/markdown-in-browser-vscode-extension#readme",
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
@@ -59,7 +80,7 @@
     "compile": "tsc -p .",
     "watch": "tsc -watch -p .",
     "vscode:prepublish": "npm run compile",
-    "package": "vsce package --allow-missing-repository --skip-license"
+    "package": "vsce package"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
